@@ -14,7 +14,6 @@
           display: none;
         }
 
-        /* Chỉ hiện trên mobile/touch */
         @media (pointer: coarse), (max-width: 900px) {
 
           #mobile-controls {
@@ -61,8 +60,8 @@
           #cBtn      { right: 280px; bottom: 90px; }
           #wBtn      { right: 360px; bottom: 90px; }
 
-          /* Extra */
-          #f5Btn     { right: 40px; top: 20px; }
+          /* Fullscreen button */
+          #fsBtn     { right: 40px; top: 20px; }
         }
         </style>
     </head>
@@ -84,8 +83,8 @@
           <button class="ctrl-btn ctrl-small" id="cBtn">C</button>
           <button class="ctrl-btn ctrl-small" id="wBtn">W</button>
 
-          <!-- Restart -->
-          <button class="ctrl-btn ctrl-small" id="f5Btn">F5</button>
+          <!-- Fullscreen -->
+          <button class="ctrl-btn ctrl-small" id="fsBtn">⛶</button>
 
         </div>
         <script type="text/javascript" src="js/libs/pixi.js"></script>
@@ -147,9 +146,43 @@
         bindButton("cBtn", "control");
         bindButton("wBtn", "pagedown");
 
-        /* Reload */
-        document.getElementById("f5Btn").addEventListener("click", () => {
-          location.reload();
+        /* Fullscreen — Android dùng Fullscreen API, iOS dùng trick meta viewport */
+        const fsBtn = document.getElementById("fsBtn");
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+        function enterFullscreen() {
+          const el = document.documentElement;
+          if (el.requestFullscreen)          el.requestFullscreen();
+          else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen(); // Android Chrome cũ
+          fsBtn.textContent = "✕";
+        }
+
+        function exitFullscreen() {
+          if (document.exitFullscreen)          document.exitFullscreen();
+          else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+          fsBtn.textContent = "⛶";
+        }
+
+        /* iOS: không có Fullscreen API — ẩn thanh địa chỉ bằng cách scroll */
+        function iosFullscreen() {
+          window.scrollTo(0, 1);
+          fsBtn.textContent = "✕";
+        }
+
+        fsBtn.addEventListener("click", () => {
+          if (isIOS) {
+            iosFullscreen();
+            return;
+          }
+          const isFs = document.fullscreenElement || document.webkitFullscreenElement;
+          isFs ? exitFullscreen() : enterFullscreen();
+        });
+
+        document.addEventListener("fullscreenchange", () => {
+          fsBtn.textContent = document.fullscreenElement ? "✕" : "⛶";
+        });
+        document.addEventListener("webkitfullscreenchange", () => {
+          fsBtn.textContent = document.webkitFullscreenElement ? "✕" : "⛶";
         });
         </script>
     </body>
