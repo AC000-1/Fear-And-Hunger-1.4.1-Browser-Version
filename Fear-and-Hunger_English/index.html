@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="viewport" content="user-scalable=no">
+        <link rel="icon" href="icon/icon.png" type="image/png">
+        <link rel="apple-touch-icon" href="icon/icon.png">
+        <link rel="stylesheet" type="text/css" href="fonts/gamefont.css">
+        <title>Fear &amp; Hunger</title>
+        <style>
+        #mobile-controls {
+          display: none;
+        }
+
+        /* Chỉ hiện trên mobile/touch */
+        @media (pointer: coarse), (max-width: 900px) {
+
+          #mobile-controls {
+            display: block;
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            pointer-events: none;
+            user-select: none;
+          }
+
+          .ctrl-btn {
+            position: absolute;
+            width: 64px;
+            height: 64px;
+            border: none;
+            border-radius: 14px;
+            background: rgba(0,0,0,0.45);
+            color: white;
+            font-size: 22px;
+            pointer-events: auto;
+          }
+
+          .ctrl-small {
+            width: 54px;
+            height: 54px;
+            font-size: 16px;
+          }
+
+          canvas {
+            touch-action: none;
+          }
+
+          /* D-Pad */
+          #up    { left: 90px;  bottom: 170px; }
+          #left  { left: 20px;  bottom: 100px; }
+          #down  { left: 90px;  bottom: 100px; }
+          #right { left: 160px; bottom: 100px; }
+
+          /* Action buttons */
+          #zBtn      { right: 120px; bottom: 150px; }
+          #xBtn      { right: 40px;  bottom: 100px; }
+          #shiftBtn  { right: 200px; bottom: 90px; }
+          #cBtn      { right: 280px; bottom: 90px; }
+          #wBtn      { right: 360px; bottom: 90px; }
+
+          /* Extra */
+          #f5Btn     { right: 40px; top: 20px; }
+        }
+        </style>
+    </head>
+    <body style="background-color: black">
+        <div id="mobile-controls">
+
+          <!-- Movement -->
+          <button class="ctrl-btn" id="up">↑</button>
+          <button class="ctrl-btn" id="left">←</button>
+          <button class="ctrl-btn" id="down">↓</button>
+          <button class="ctrl-btn" id="right">→</button>
+
+          <!-- Main -->
+          <button class="ctrl-btn" id="zBtn">Z</button>
+          <button class="ctrl-btn" id="xBtn">X</button>
+
+          <!-- Utility -->
+          <button class="ctrl-btn ctrl-small" id="shiftBtn">Shift</button>
+          <button class="ctrl-btn ctrl-small" id="cBtn">C</button>
+          <button class="ctrl-btn ctrl-small" id="wBtn">W</button>
+
+          <!-- Restart -->
+          <button class="ctrl-btn ctrl-small" id="f5Btn">F5</button>
+
+        </div>
+        <script type="text/javascript" src="js/libs/pixi.js"></script>
+        <script type="text/javascript" src="js/libs/pixi-tilemap.js"></script>
+        <script type="text/javascript" src="js/libs/pixi-picture.js"></script>
+        <script type="text/javascript" src="js/libs/fpsmeter.js"></script>
+        <script type="text/javascript" src="js/libs/lz-string.js"></script>
+        <script type="text/javascript" src="js/libs/iphone-inline-video.browser.js"></script>
+        <script type="text/javascript" src="js/rpg_core.js"></script>
+        <script type="text/javascript" src="js/rpg_managers.js"></script>
+        <script type="text/javascript" src="js/rpg_objects.js"></script>
+        <script type="text/javascript" src="js/rpg_scenes.js"></script>
+        <script type="text/javascript" src="js/rpg_sprites.js"></script>
+        <script type="text/javascript" src="js/rpg_windows.js"></script>
+        <script type="text/javascript" src="js/plugins.js"></script>
+        <script type="text/javascript" src="js/main.js"></script>
+
+        <script>
+        function press(key) {
+          Input._currentState[key] = true;
+        }
+
+        function release(key) {
+          Input._currentState[key] = false;
+        }
+
+        function bindButton(id, key) {
+          const btn = document.getElementById(id);
+
+          const start = (e) => {
+            e.preventDefault();
+            press(key);
+          };
+
+          const end = (e) => {
+            e.preventDefault();
+            release(key);
+          };
+
+          btn.addEventListener("touchstart", start);
+          btn.addEventListener("touchend", end);
+
+          btn.addEventListener("mousedown", start);
+          btn.addEventListener("mouseup", end);
+
+          btn.addEventListener("mouseleave", end);
+        }
+
+        /* RPG Maker MV key names */
+        bindButton("up", "up");
+        bindButton("left", "left");
+        bindButton("down", "down");
+        bindButton("right", "right");
+
+        bindButton("zBtn", "ok");
+        bindButton("xBtn", "escape");
+
+        bindButton("shiftBtn", "shift");
+        bindButton("cBtn", "control");
+        bindButton("wBtn", "pagedown");
+
+        /* Reload */
+        document.getElementById("f5Btn").addEventListener("click", () => {
+          location.reload();
+        });
+        </script>
+    </body>
+</html>
