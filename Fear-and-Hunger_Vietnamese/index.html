@@ -4,12 +4,20 @@
         <meta charset="UTF-8">
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-        <meta name="viewport" content="user-scalable=no">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
         <link rel="icon" href="icon/icon.png" type="image/png">
         <link rel="apple-touch-icon" href="icon/icon.png">
         <link rel="stylesheet" type="text/css" href="fonts/gamefont.css">
         <title>Fear &amp; Hunger</title>
         <style>
+        html, body {
+          margin: 0;
+          padding: 0;
+          height: 100%;
+          overflow: hidden;
+          background: black;
+        }
+
         #mobile-controls {
           display: none;
         }
@@ -103,87 +111,136 @@
         <script type="text/javascript" src="js/main.js"></script>
 
         <script>
-        function press(key) {
-          Input._currentState[key] = true;
-        }
+        /* ── Helpers ── */
+        function press(key)   { if (Input._currentState) Input._currentState[key] = true;  }
+        function release(key) { if (Input._currentState) Input._currentState[key] = false; }
 
-        function release(key) {
-          Input._currentState[key] = false;
-        }
-
+        /* ── Mobile buttons ── */
         function bindButton(id, key) {
           const btn = document.getElementById(id);
+          if (!btn) return;
 
-          const start = (e) => {
-            e.preventDefault();
-            press(key);
-          };
+          const start = (e) => { e.preventDefault(); press(key); };
+          const end   = (e) => { e.preventDefault(); release(key); };
 
-          const end = (e) => {
-            e.preventDefault();
-            release(key);
-          };
-
-          btn.addEventListener("touchstart", start);
-          btn.addEventListener("touchend", end);
-
-          btn.addEventListener("mousedown", start);
-          btn.addEventListener("mouseup", end);
-
-          btn.addEventListener("mouseleave", end);
+          btn.addEventListener("touchstart",  start, { passive: false });
+          btn.addEventListener("touchend",    end,   { passive: false });
+          btn.addEventListener("touchcancel", end,   { passive: false });
+          btn.addEventListener("mousedown",   start);
+          btn.addEventListener("mouseup",     end);
+          btn.addEventListener("mouseleave",  end);
         }
 
-        /* RPG Maker MV key names */
-        bindButton("up", "up");
-        bindButton("left", "left");
-        bindButton("down", "down");
-        bindButton("right", "right");
-
-        bindButton("zBtn", "ok");
-        bindButton("xBtn", "escape");
-
+        bindButton("up",       "up");
+        bindButton("left",     "left");
+        bindButton("down",     "down");
+        bindButton("right",    "right");
+        bindButton("zBtn",     "ok");
+        bindButton("xBtn",     "escape");
         bindButton("shiftBtn", "shift");
-        bindButton("cBtn", "control");
-        bindButton("wBtn", "pagedown");
+        bindButton("cBtn",     "control");
+        bindButton("wBtn",     "pagedown");
 
-        /* Fullscreen — Android dùng Fullscreen API, iOS dùng trick meta viewport */
+        /* ── WASD keyboard support for PC ──
+           RPG Maker MV maps keyCodes via Input.keyMapper:
+             37=left, 38=up, 39=right, 40=down
+           We remap W/A/S/D by adding them to keyMapper after the engine loads,
+           then also hook keyMapper directly so Input picks them up natively.    */
+
+        // W=87, A=65, S=83, D=68  →  arrow keyCodes
+        const wasdKeyCodeMap = {
+          87: 38, // W → Up    (↑)
+          65: 37, // A → Left  (←)
+          83: 40, // S → Down  (↓)
+          68: 39  // D → Right (→)
+        };
+
+        // Wait for RPG Maker to finish setting up Input.keyMapper, then patch it
+        function patchWASD() {
+          if (typeof Input === "undefined" || !Input.keyMapper) {
+            setTimeout(patchWASD, 200);
+            return;
+          }
+          // Add WASD keyCodes pointing to the same action strings as arrow keys
+          Input.keyMapper[87] = "up";
+          Input.keyMapper[65] = "left";
+          Input.keyMapper[83] = "down";
+          Input.keyMapper[68] = "right";
+        }
+        patchWASD();
+
+        /* ── Fullscreen ──
+           iOS Safari (including 2026) does NOT support the Fullscreen API.
+           Best we can do:
+             1. If added to Home Screen (standalone), the browser chrome is already gone.
+             2. In Safari browser: scroll to hide the address bar + set body to 100vh trick.
+             3. On other browsers (Chrome Android, desktop): use standard Fullscreen API.       */
+
         const fsBtn = document.getElementById("fsBtn");
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream
+                   || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); // iPadOS 13+
+
+        const isStandalone = window.navigator.standalone === true
+                          || window.matchMedia("(display-mode: standalone)").matches;
+
+        function iosHideChrome() {
+          // Force body taller than viewport so scrolling is possible, then snap back
+          document.body.style.height = (window.screen.height + 100) + "px";
+          window.scrollTo(0, 1);
+          setTimeout(() => {
+            document.body.style.height = "100%";
+            window.scrollTo(0, 0);
+          }, 400);
+          fsBtn.textContent = "✕";
+        }
 
         function enterFullscreen() {
           const el = document.documentElement;
-          if (el.requestFullscreen)          el.requestFullscreen();
-          else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen(); // Android Chrome cũ
+          const req = el.requestFullscreen
+                   || el.webkitRequestFullscreen
+                   || el.mozRequestFullScreen
+                   || el.msRequestFullscreen;
+          if (req) req.call(el);
           fsBtn.textContent = "✕";
         }
 
         function exitFullscreen() {
-          if (document.exitFullscreen)          document.exitFullscreen();
-          else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+          const ex = document.exitFullscreen
+                  || document.webkitExitFullscreen
+                  || document.mozCancelFullScreen
+                  || document.msExitFullscreen;
+          if (ex) ex.call(document);
           fsBtn.textContent = "⛶";
-        }
-
-        /* iOS: không có Fullscreen API — ẩn thanh địa chỉ bằng cách scroll */
-        function iosFullscreen() {
-          window.scrollTo(0, 1);
-          fsBtn.textContent = "✕";
         }
 
         fsBtn.addEventListener("click", () => {
           if (isIOS) {
-            iosFullscreen();
+            if (isStandalone) {
+              // Already fullscreen in standalone — nothing to do, show user tip
+              fsBtn.textContent = "✓";
+              setTimeout(() => { fsBtn.textContent = "⛶"; }, 1500);
+            } else {
+              iosHideChrome();
+            }
             return;
           }
-          const isFs = document.fullscreenElement || document.webkitFullscreenElement;
+          const isFs = document.fullscreenElement
+                    || document.webkitFullscreenElement
+                    || document.mozFullScreenElement
+                    || document.msFullscreenElement;
           isFs ? exitFullscreen() : enterFullscreen();
         });
 
-        document.addEventListener("fullscreenchange", () => {
-          fsBtn.textContent = document.fullscreenElement ? "✕" : "⛶";
-        });
-        document.addEventListener("webkitfullscreenchange", () => {
-          fsBtn.textContent = document.webkitFullscreenElement ? "✕" : "⛶";
-        });
+        // Sync icon on fullscreen change (non-iOS)
+        ["fullscreenchange", "webkitfullscreenchange", "mozfullscreenchange", "MSFullscreenChange"]
+          .forEach(evt => document.addEventListener(evt, () => {
+            const isFs = document.fullscreenElement
+                      || document.webkitFullscreenElement
+                      || document.mozFullScreenElement
+                      || document.msFullscreenElement;
+            fsBtn.textContent = isFs ? "✕" : "⛶";
+          }));
         </script>
     </body>
 </html>
